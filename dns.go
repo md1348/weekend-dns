@@ -3,6 +3,8 @@ package main
 import (
 	"encoding/binary"
 	"fmt"
+	"math/bits"
+	"math/rand"
 	"strings"
 )
 
@@ -39,10 +41,14 @@ func (d *DNSQuestion) encodeName() []byte {
 	output := make([]byte, 0)
 	parts := strings.Split(d.name, ".")
 	for _, part := range parts {
-		output = binary.BigEndian.AppendUint16(output, uint16(len(part)))
+		bitSize := bits.Len(uint(len(part)))
+		byteSize := (bitSize + 7) / 8
+		for i := 0; i < byteSize; i++ {
+			output = append(output, byte(uint(len(part))>>(i*8)))
+		}
 		output = append(output, []byte(part)...)
 	}
-	output = binary.BigEndian.AppendUint16(output, 0)
+	output = append(output, byte(0))
 	return output
 }
 
@@ -54,12 +60,46 @@ func (d *DNSQuestion) toBytes() []byte {
 }
 
 func buildQuery(domain string, recordType uint16) []byte {
-	output := make([]byte, 0)
+	id := uint16(rand.Int())
+	RECURSION_DESIRED := uint16(1 << 8)
+	header := DNSHeader{id: id, numQuestions: 1, flags: RECURSION_DESIRED}
+	question := DNSQuestion{name: domain, type_: recordType, class: CLASS_IN}
+	output := header.toBytes()
+	output = append(output, question.toBytes()...)
 	return output
 }
 
 func main() {
 	h := DNSQuestion{"google.com", 1, 513}
-	fmt.Println(h.toBytes())
+	// query := h.toBytes()
+	query := h.encodeName()
+
+	// query := buildQuery("example.com", TYPE_A)
+
+	for _, b := range query {
+		fmt.Printf("0x%x ", b)
+	}
+
+	// conn, err := net.Dial("udp", "8.8.8.8:53")
+	// if err != nil {
+	// 	fmt.Println("error writing")
+	// 	return
+	// }
+	// n, err := conn.Write(query)
+	// if err != nil {
+	// 	fmt.Println("error writing")
+	// 	return
+	// }
+	// fmt.Printf("wrote %d bytes\n", n)
+	//
+	// buffer := make([]byte, 1024)
+	// n, err = conn.Read(buffer)
+	// if err != nil {
+	// 	fmt.Println("error reading")
+	// 	return
+	// }
+	// fmt.Printf("read %d bytes\n", n)
+	//
+	// fmt.Println(buffer[:n])
 	return
 }
