@@ -97,6 +97,34 @@ type DNSRecord struct {
 	data  string
 }
 
+func parseDomain(buf *bytes.Buffer) (string, error) {
+	parts := make([]byte, 0)
+
+	for {
+		length, err := buf.ReadByte()
+		if err != nil {
+			return "", errors.New("error reading domain name 1")
+		}
+
+		if length == 0 {
+			break
+		}
+
+		if len(parts) > 0 {
+			parts = append(parts, '.')
+		}
+
+		part := make([]byte, length)
+		_, err = buf.Read(part)
+		if err != nil {
+			return "", errors.New("error reading domain name 2")
+		}
+		parts = append(parts, part...)
+	}
+
+	return string(parts), nil
+}
+
 func main() {
 	query := buildQuery("example.com", TYPE_A)
 
@@ -120,7 +148,9 @@ func main() {
 	}
 	fmt.Printf("read %d bytes\n", n)
 
-	// fmt.Println(buffer[:n])
 	buf := bytes.NewBuffer(readBytes)
-	fmt.Println(buildHeader(buf))
+	header, _ := buildHeader(buf)
+	domain, _ := parseDomain(buf)
+	fmt.Println(header)
+	fmt.Println(domain)
 }
