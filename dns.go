@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/bits"
 	"math/rand"
+	"net"
 	"strings"
 )
 
@@ -70,36 +71,28 @@ func buildQuery(domain string, recordType uint16) []byte {
 }
 
 func main() {
-	h := DNSQuestion{"google.com", 1, 513}
-	// query := h.toBytes()
-	query := h.encodeName()
+	query := buildQuery("example.com", TYPE_A)
 
-	// query := buildQuery("example.com", TYPE_A)
-
-	for _, b := range query {
-		fmt.Printf("0x%x ", b)
+	conn, err := net.Dial("udp", "8.8.8.8:53")
+	if err != nil {
+		fmt.Println("error writing")
+		return
 	}
+	n, err := conn.Write(query)
+	if err != nil {
+		fmt.Println("error writing")
+		return
+	}
+	fmt.Printf("wrote %d bytes\n", n)
 
-	// conn, err := net.Dial("udp", "8.8.8.8:53")
-	// if err != nil {
-	// 	fmt.Println("error writing")
-	// 	return
-	// }
-	// n, err := conn.Write(query)
-	// if err != nil {
-	// 	fmt.Println("error writing")
-	// 	return
-	// }
-	// fmt.Printf("wrote %d bytes\n", n)
-	//
-	// buffer := make([]byte, 1024)
-	// n, err = conn.Read(buffer)
-	// if err != nil {
-	// 	fmt.Println("error reading")
-	// 	return
-	// }
-	// fmt.Printf("read %d bytes\n", n)
-	//
-	// fmt.Println(buffer[:n])
+	buffer := make([]byte, 1024)
+	n, err = conn.Read(buffer)
+	if err != nil {
+		fmt.Println("error reading")
+		return
+	}
+	fmt.Printf("read %d bytes\n", n)
+
+	fmt.Println(buffer[:n])
 	return
 }
