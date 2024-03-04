@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -22,8 +23,10 @@ type DNSHeader struct {
 	numAdditionals uint16
 }
 
-func buildHeader(header []byte) (*DNSHeader, error) {
-	if len(header) != 12 {
+func buildHeader(buf *bytes.Buffer) (*DNSHeader, error) {
+	header := make([]byte, 12)
+	n, err := buf.Read(header)
+	if n != 12 || err != nil {
 		return nil, errors.New("invalid dns header - must be 12 bytes")
 	}
 
@@ -109,8 +112,8 @@ func main() {
 	}
 	fmt.Printf("wrote %d bytes\n", n)
 
-	buffer := make([]byte, 1024)
-	n, err = conn.Read(buffer)
+	readBytes := make([]byte, 1024)
+	n, err = conn.Read(readBytes)
 	if err != nil {
 		fmt.Println("error reading")
 		return
@@ -118,6 +121,6 @@ func main() {
 	fmt.Printf("read %d bytes\n", n)
 
 	// fmt.Println(buffer[:n])
-	fmt.Println(buildHeader(buffer[:12]))
-	return
+	buf := bytes.NewBuffer(readBytes)
+	fmt.Println(buildHeader(buf))
 }
