@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"math/bits"
 	"math/rand"
@@ -19,6 +20,21 @@ type DNSHeader struct {
 	numAnswers     uint16
 	numAuthorities uint16
 	numAdditionals uint16
+}
+
+func buildHeader(header []byte) (*DNSHeader, error) {
+	if len(header) != 12 {
+		return nil, errors.New("invalid dns header - must be 12 bytes")
+	}
+
+	return &DNSHeader{
+		id:             uint16(header[0])<<8 | uint16(header[1]),
+		flags:          uint16(header[2])<<8 | uint16(header[3]),
+		numQuestions:   uint16(header[4])<<8 | uint16(header[5]),
+		numAnswers:     uint16(header[6])<<8 | uint16(header[7]),
+		numAuthorities: uint16(header[8])<<8 | uint16(header[9]),
+		numAdditionals: uint16(header[10])<<8 | uint16(header[11]),
+	}, nil
 }
 
 func (d *DNSHeader) toBytes() []byte {
@@ -70,6 +86,14 @@ func buildQuery(domain string, recordType uint16) []byte {
 	return output
 }
 
+type DNSRecord struct {
+	name  string
+	type_ uint16
+	class uint16
+	ttl   int
+	data  string
+}
+
 func main() {
 	query := buildQuery("example.com", TYPE_A)
 
@@ -93,6 +117,7 @@ func main() {
 	}
 	fmt.Printf("read %d bytes\n", n)
 
-	fmt.Println(buffer[:n])
+	// fmt.Println(buffer[:n])
+	fmt.Println(buildHeader(buffer[:12]))
 	return
 }
