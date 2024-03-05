@@ -79,6 +79,21 @@ func (d *DNSQuestion) toBytes() []byte {
 	return output
 }
 
+func parseQuestion(buf *bytes.Buffer) (*DNSQuestion, error) {
+	domain, err := parseDomainSimple(buf)
+	if err != nil {
+		return nil, errors.New("error parsing domain")
+	}
+
+	data := make([]byte, 4)
+	buf.Read(data)
+
+	type_ := uint16(data[0])<<8 | uint16(data[1])
+	class := uint16(data[2])<<8 | uint16(data[3])
+
+	return &DNSQuestion{domain, type_, class}, nil
+}
+
 func buildQuery(domain string, recordType uint16) []byte {
 	id := uint16(rand.Int())
 	RECURSION_DESIRED := uint16(1 << 8)
@@ -93,7 +108,7 @@ type DNSRecord struct {
 	name  string
 	type_ uint16
 	class uint16
-	ttl   int
+	ttl   uint32
 	data  string
 }
 
@@ -126,28 +141,37 @@ func parseDomainSimple(buf *bytes.Buffer) (string, error) {
 }
 
 // Assumes header has been parsed
-func parseQuestion(buf *bytes.Buffer) (*DNSQuestion, error) {
+func parseRecord(buf *bytes.Buffer) (*DNSRecord, error) {
 	domain, err := parseDomainSimple(buf)
 	if err != nil {
 		return nil, errors.New("error parsing domain")
 	}
 
-	data := make([]byte, 4)
+	data := make([]byte, 10)
 	buf.Read(data)
+
 	type_ := uint16(data[0])<<8 | uint16(data[1])
 	class := uint16(data[2])<<8 | uint16(data[3])
+	ttl := uint32(data[4])<<24 | uint32(data[5])<<16 | uint32(data[6])<<8 | uint32(data[7])
+	data_len := uint16(data[8])<<8 | uint16(data[9])
 
-	return &DNSQuestion{
+	data = make([]byte, data_len)
+	buf.Read(data)
+
+	return &DNSRecord{
 		name:  domain,
 		type_: type_,
 		class: class,
+		ttl:   ttl,
+		data:  string(data),
 	}, nil
 }
 
 func main() {
 	query := buildQuery("example.com", TYPE_A)
 
-	conn, err := net.Dial("udp", "8.8.8.8:53")
+	// conn, err := net.Dial("udp", "8.8.8.8:53")
+	conn, err := net.Dial("udp", "205.171.2.65:53")
 	if err != nil {
 		fmt.Println("error writing")
 		return
@@ -170,6 +194,8 @@ func main() {
 	buf := bytes.NewBuffer(readBytes)
 	header, _ := buildHeader(buf)
 	question, _ := parseQuestion(buf)
-	fmt.Println(header)
-	fmt.Println(question)
+	record, _ := parseRecord(buf)
+	fmt.Printf("%+v\n", header)
+	fmt.Printf("%+v\n", question)
+	fmt.Printf("%+v\n", record)
 }
