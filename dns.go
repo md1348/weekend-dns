@@ -149,6 +149,7 @@ func parseRecord(buf *bytes.Buffer) (*DNSRecord, error) {
 
 	data := make([]byte, 10)
 	buf.Read(data)
+	fmt.Println(data)
 
 	type_ := uint16(data[0])<<8 | uint16(data[1])
 	class := uint16(data[2])<<8 | uint16(data[3])
@@ -170,8 +171,7 @@ func parseRecord(buf *bytes.Buffer) (*DNSRecord, error) {
 func main() {
 	query := buildQuery("example.com", TYPE_A)
 
-	// conn, err := net.Dial("udp", "8.8.8.8:53")
-	conn, err := net.Dial("udp", "205.171.2.65:53")
+	conn, err := net.Dial("udp", "8.8.8.8:53")
 	if err != nil {
 		fmt.Println("error writing")
 		return
