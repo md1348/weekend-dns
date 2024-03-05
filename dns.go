@@ -97,7 +97,7 @@ type DNSRecord struct {
 	data  string
 }
 
-func parseDomain(buf *bytes.Buffer) (string, error) {
+func parseDomainSimple(buf *bytes.Buffer) (string, error) {
 	parts := make([]byte, 0)
 
 	for {
@@ -125,6 +125,25 @@ func parseDomain(buf *bytes.Buffer) (string, error) {
 	return string(parts), nil
 }
 
+// Assumes header has been parsed
+func parseQuestion(buf *bytes.Buffer) (*DNSQuestion, error) {
+	domain, err := parseDomainSimple(buf)
+	if err != nil {
+		return nil, errors.New("error parsing domain")
+	}
+
+	data := make([]byte, 4)
+	buf.Read(data)
+	type_ := uint16(data[0])<<8 | uint16(data[1])
+	class := uint16(data[2])<<8 | uint16(data[3])
+
+	return &DNSQuestion{
+		name:  domain,
+		type_: type_,
+		class: class,
+	}, nil
+}
+
 func main() {
 	query := buildQuery("example.com", TYPE_A)
 
@@ -150,7 +169,7 @@ func main() {
 
 	buf := bytes.NewBuffer(readBytes)
 	header, _ := buildHeader(buf)
-	domain, _ := parseDomain(buf)
+	question, _ := parseQuestion(buf)
 	fmt.Println(header)
-	fmt.Println(domain)
+	fmt.Println(question)
 }
